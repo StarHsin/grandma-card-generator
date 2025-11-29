@@ -1,12 +1,16 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv  # 新增
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from services.compose_service import ComposeService
 from services.llm_service import LLMService, ElderCardText
+
+# 先載入 .env，這樣 llm_service 裡的 os.getenv 才抓得到
+load_dotenv()
 
 # ===== 基本設定 =====
 
@@ -92,7 +96,7 @@ async def generate_card(req: GenerateRequest):
             detail=f"No background directory for theme: {theme}",
         )
 
-    # 1) 產出文字（目前用模板，未來這裡改成真的 LLM）
+    # 1) 產出文字（這裡會走 LLMService，若沒 key 就 fallback）
     elder_text: ElderCardText = llm_service.generate_text(theme)
 
     # 2) 合成圖片
