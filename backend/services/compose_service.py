@@ -16,6 +16,12 @@ def split_text_to_lines(text: str, max_chars: int) -> list:
     return [text[i: i + max_chars] for i in range(0, len(text), max_chars)]
 
 
+# 這裡統一管理每一種文字的「每行最大字數」
+TITLE_MAX_CHARS = 12          # 原本 8，放寬一點
+SUBTITLE_MAX_CHARS = 20       # 原本 15
+FOOTER_MAX_CHARS = 24         # 原本 18
+
+
 class ComposeService:
     def __init__(self, background_base_dir: str, font_path: str | None = None):
         self.background_base_dir = background_base_dir
@@ -99,14 +105,15 @@ class ComposeService:
         draw = ImageDraw.Draw(bg)
 
         # 把 subtitle / footer 切行（避免太長）
-        subtitle_lines = split_text_to_lines(subtitle, max_chars=15)
-        footer_lines = split_text_to_lines(footer, max_chars=18)
+        subtitle_lines = split_text_to_lines(
+            subtitle, max_chars=SUBTITLE_MAX_CHARS)
+        footer_lines = split_text_to_lines(footer, max_chars=FOOTER_MAX_CHARS)
 
         # 排版：大致上 title 在中上方，subtitle 在中間，footer 在下方
         current_y = height // 4
 
         # title 可以分兩行（如果需要）
-        for line in split_text_to_lines(title, max_chars=8):
+        for line in split_text_to_lines(title, max_chars=TITLE_MAX_CHARS):
             current_y = self._draw_centered_text(
                 draw, line, title_font, center_x, current_y, fill=(
                     120, 0, 0, 255)

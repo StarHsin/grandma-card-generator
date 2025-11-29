@@ -49,6 +49,21 @@ function App() {
     }
   };
 
+  const handleDownload = () => {
+    if (!result) return;
+
+    const link = document.createElement("a");
+    const themeLabel =
+      themes.find((t) => t.id === result.theme)?.label || result.theme;
+
+    link.href = `data:image/png;base64,${result.image_base64}`;
+    link.download = `elder-card-${themeLabel}-${Date.now()}.png`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="app-root">
       <h1 className="app-title">長輩圖生成器 MVP</h1>
@@ -96,6 +111,10 @@ function App() {
               src={`data:image/png;base64,${result.image_base64}`}
               alt="Generated elder card"
             />
+
+            <button className="download-button" onClick={handleDownload}>
+              下載圖片
+            </button>
           </div>
         </div>
       )}
