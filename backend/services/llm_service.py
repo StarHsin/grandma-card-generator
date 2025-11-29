@@ -1,5 +1,6 @@
 import json
 import os
+import random
 from dataclasses import dataclass
 from typing import Dict, Optional
 
@@ -50,19 +51,17 @@ class LLMService:
             ),
         }
 
-        # SDK 會自動讀 GEMINI_API_KEY 或 GOOGLE_API_KEY，這裡也可以手動讀
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         print("[LLMService] GEMINI_API_KEY loaded:", bool(api_key))
 
-        # ✅ 這裡改成正確的 Client 寫法
         self.client: Optional[genai.Client] = (
             genai.Client(api_key=api_key) if api_key else None
         )
 
-        # 你可以改成適合自己的模型，例如 gemini-2.0-flash / gemini-2.5-flash 等
+        # 可調整成你想用的模型
         self.model_name = "gemini-2.0-flash"
 
-        # 主題 key -> 中文說明（給 prompt 用）
+        # 主題說明
         self.theme_descriptions: Dict[str, str] = {
             "morning": "早安、早晨開啟新的一天，溫暖打氣的祝福。",
             "health": "健康、保重身體、注意飲食作息的提醒與祝福。",
@@ -74,28 +73,44 @@ class LLMService:
             "festival_midautumn": "中秋節、賞月、吃月餅、團圓的祝福。",
         }
 
+        # 隨機風格（讓每次語氣有點不一樣）
+        self.style_variants = [
+            "溫柔關懷",
+            "活力元氣",
+            "俏皮幽默",
+            "穩重安定",
+            "溫暖療癒",
+        ]
+
     # --------- prompt 組裝 ---------
 
-    def _build_prompt(self, theme: str) -> str:
+    def _build_prompt(self, theme: str, style: str) -> str:
         theme_desc = self.theme_descriptions.get(
             theme, "一般祝福，內容溫暖、正向、適合傳給親友。"
         )
 
         instructions = f"""
 你是一位擅長幫人寫 Line 「長輩圖」祝福文字的文案設計師。
+
+本次風格設定：
+- 主題：{theme_desc}
+- 整體語氣：偏向「{style}」的感覺。
+
 風格要求：
 - 使用臺灣常見的繁體中文用語。
-- 口吻溫暖、關心、帶一點可愛幽默，但不要太油膩。
+- 口吻溫暖、關心，可以帶一點可愛或幽默，但不要太油膩。
 - 可以適度使用 emoji，但整體不要超過 3 個。
 - 讓長輩看到會想轉傳給朋友或家人的感覺。
+- 儘量避免每次都出現以下常見句型：
+  - 「又是嶄新的一天」
+  - 「祝你有個順心如意的好心情」
+  - 「把這份祝福分享給重要的人」
+  請多變換用詞與句型，讓每一張圖的文字有明顯差異。
 
 輸出結構：
 - title：8～15 個字左右，適合作為長輩圖主標題，語氣正向、簡潔有力。
 - subtitle：1～2 句，約 25～45 個字，針對主題給出具體的關心或提醒。
 - footer：1 句，約 20～35 個字，鼓勵把這張圖分享給某個對象，可以附上 1～2 個 emoji。
-
-主題說明：
-{theme_desc}
 
 注意：
 - 一律使用繁體中文。
@@ -108,8 +123,6 @@ JSON 格式如下：
   "subtitle": "...",
   "footer": "..."
 }}
-
-請根據上面的說明，為「{theme}」這個主題產生一組新的祝福文字，不要重複範例內容。
         """.strip()
 
         few_shot = """
@@ -156,25 +169,25 @@ JSON 格式如下：
         - 失敗就回到模板
         """
         if not self.client:
-            # 沒有 API key，直接 fallback
             return self._fallback(theme)
 
-        prompt = self._build_prompt(theme)
+        style = random.choice(self.style_variants)  # 每次隨機一種風格
+        prompt = self._build_prompt(theme, style)
 
         try:
-            # google-genai 標準用法：
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=prompt,
                 config={
                     "response_mime_type": "application/json",
-                    "temperature": 0.6,
+                    "temperature": 0.9,      # 調高一點，讓表達更有變化
+                    "top_p": 0.95,
                     "max_output_tokens": 400,
                 },
             )
 
             raw_text = response.text.strip()
-            print("[LLMService] Gemini raw response:", raw_text)  # debug 用
+            print("[LLMService] Gemini raw response:", raw_text)
 
             data = json.loads(raw_text)
 
