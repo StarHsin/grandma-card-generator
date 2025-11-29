@@ -11,10 +11,20 @@ const themes = [
   { id: "festival_common", label: "節慶：一般祝福" },
 ];
 
+const layouts = [
+  { id: "auto", label: "自動變換" },
+  { id: "center", label: "置中經典" },
+  { id: "top_bottom", label: "上下分佈" },
+  { id: "left_block", label: "左側文字" },
+  { id: "diagonal", label: "斜斜標題" },
+  { id: "vertical", label: "直書標題" },
+];
+
 const API_BASE_URL = "http://localhost:8000";
 
 function App() {
   const [selectedTheme, setSelectedTheme] = useState("morning");
+  const [selectedLayout, setSelectedLayout] = useState("auto");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
@@ -30,7 +40,10 @@ function App() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ theme: selectedTheme }),
+        body: JSON.stringify({
+          theme: selectedTheme,
+          layout: selectedLayout,
+        }),
       });
 
       if (!res.ok) {
@@ -74,7 +87,7 @@ function App() {
               長輩圖生成器
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              選擇主題，一鍵產生長輩最愛的祝福小卡 💌
+              選擇主題與版型，一鍵產生長輩最愛的祝福小卡 💌
             </p>
           </div>
           <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs text-slate-500 backdrop-blur">
@@ -88,10 +101,11 @@ function App() {
           {/* 左側：控制面板 */}
           <section className="h-max rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur">
             <h2 className="mb-4 text-base font-semibold text-slate-700">
-              1. 選擇主題與操作
+              1. 選擇主題與版型
             </h2>
 
             <div className="space-y-4">
+              {/* 主題選單 */}
               <div className="space-y-1.5">
                 <label
                   htmlFor="theme-select"
@@ -111,8 +125,30 @@ function App() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* 排版選單 */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="layout-select"
+                  className="text-sm font-medium text-slate-700"
+                >
+                  文字排版風格
+                </label>
+                <select
+                  id="layout-select"
+                  value={selectedLayout}
+                  onChange={(e) => setSelectedLayout(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none ring-0 focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                >
+                  {layouts.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
                 <p className="text-xs text-slate-500">
-                  目前支援早安、健康、生活感悟與各種節慶主題。
+                  「自動變換」會在多種版型之間隨機切換；也可以指定喜歡的排版。
                 </p>
               </div>
 
@@ -154,7 +190,7 @@ function App() {
               <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center text-sm text-slate-500">
                 <span className="text-3xl">👵👴</span>
                 <p>
-                  選一個主題，點擊「生成長輩圖」，這裡會顯示文案與圖片預覽。
+                  選一個主題與排版風格，點擊「生成長輩圖」，這裡會顯示文案與圖片預覽。
                 </p>
               </div>
             )}
@@ -163,15 +199,23 @@ function App() {
               <>
                 {/* 文案區 */}
                 <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
-                  <h3 className="text-lg font-semibold text-slate-800">
-                    {result.text.title}
-                  </h3>
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-lg font-semibold text-slate-800">
+                      {result.text.title}
+                    </h3>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">
+                      版型：
+                      {layouts.find((l) => l.id === result.layout)?.label ??
+                        result.layout}
+                    </span>
+                  </div>
                   <p className="mt-1 text-sm text-slate-600">
                     {result.text.subtitle}
                   </p>
-                  <p className="mt-2 text-xs text-slate-500">
+                  {/* 如果不想在網頁上看到 footer，可以把下面註解留著 */}
+                  {/* <p className="mt-2 text-xs text-slate-500">
                     {result.text.footer}
-                  </p>
+                  </p> */}
                 </div>
 
                 {/* 圖片預覽 + 下載 */}
