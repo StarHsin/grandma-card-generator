@@ -47,7 +47,7 @@ app = FastAPI(title="Elder Card Generator API")
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://grandma-card-generator.vercel.app/"
+    "https://grandma-card-generator.vercel.app"
 ]
 
 app.add_middleware(
