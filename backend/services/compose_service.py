@@ -41,14 +41,14 @@ class ComposeService:
 
         # 不同主題的基礎顏色（之後再依背景亮度微調）
         self.theme_title_colors = {
-            "morning": (180, 40, 30, 255),          # 暖紅
-            "health": (22, 120, 60, 255),           # 綠色
-            "life": (40, 80, 140, 255),             # 深藍
-            "festival_newyear": (200, 30, 30, 255),
-            "festival_christmas": (190, 40, 40, 255),
-            "festival_lantern": (200, 120, 20, 255),
-            "festival_midautumn": (160, 120, 40, 255),
-            "festival_common": (160, 60, 120, 255),
+            "morning": (255, 50, 20, 255),          # 暖紅
+            "health": (20, 180, 50, 255),           # 綠色
+            "life": (30, 100, 200, 255),             # 深藍
+            "festival_newyear": (255, 20, 20, 255),
+            "festival_christmas": (220, 20, 20, 255),
+            "festival_lantern": (255, 150, 0, 255),
+            "festival_midautumn": (220, 180, 50, 255),
+            "festival_common": (220, 50, 150, 255),
         }
 
         # assets root, 給貼紙用
@@ -145,10 +145,10 @@ class ComposeService:
 
         if lum > 150:
             # 亮字 → 深描邊
-            return (0, 0, 0, 220)
+            return (0, 0, 0, 255)
         else:
             # 暗字 → 亮描邊
-            return (255, 255, 255, 220)
+            return (255, 255, 255, 255)
 
     def _region_complexity(self, img: Image.Image, box: Tuple[int, int, int, int]) -> float:
         """
@@ -454,9 +454,9 @@ class ComposeService:
         )
 
         # 字型
-        title_font_large = self._load_font(90)
-        title_font_normal = self._load_font(72)
-        subtitle_font = self._load_font(45)
+        title_font_large = self._load_font(100)
+        title_font_normal = self._load_font(80)
+        subtitle_font = self._load_font(50)
 
         title_lines = split_text_to_lines(title, max_chars=TITLE_MAX_CHARS)
         subtitle_lines = split_text_to_lines(
@@ -464,7 +464,7 @@ class ComposeService:
         )
 
         # 外框 / glow
-        stroke_width = 3
+        stroke_width = 6
         title_stroke = self._pick_stroke_color(title_color)
         subtitle_stroke = self._pick_stroke_color(subtitle_color)
 
@@ -498,7 +498,7 @@ class ComposeService:
                 current_y,
                 line_spacing=6,
                 fill=subtitle_color,
-                stroke_width=2,
+                stroke_width=4,
                 stroke_fill=title_stroke,
             )
 
