@@ -191,6 +191,16 @@ JSON 格式如下：
 
             data = json.loads(raw_text)
 
+            # ① 如果是 list，就取第一個元素
+            if isinstance(data, list):
+                if not data:
+                    return self._fallback(theme)
+                data = data[0]
+
+            # ② 如果最後還不是 dict，就放棄用 fallback
+            if not isinstance(data, dict):
+                return self._fallback(theme)
+
             title = str(data.get("title", "")).strip()
             subtitle = str(data.get("subtitle", "")).strip()
             footer = str(data.get("footer", "")).strip()

@@ -16,7 +16,6 @@ const layouts = [
   { id: "center", label: "置中經典" },
   { id: "top_bottom", label: "上下分佈" },
   { id: "left_block", label: "左側文字" },
-  { id: "diagonal", label: "斜斜標題" },
   { id: "vertical", label: "直書標題" },
 ];
 

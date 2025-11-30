@@ -3,9 +3,22 @@ import glob
 import io
 import os
 import random
+import re
 from typing import List, Tuple
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageStat
+
+
+# 簡單移除 emoji，用來畫在圖片上的文字
+# （瀏覽器顯示文字時還是有 emoji，因為那邊用的是原始文字）
+EMOJI_PATTERN = re.compile(
+    r"[\U0001F300-\U0001FAFF\U00002700-\U000027BF]",
+    flags=re.UNICODE,
+)
+
+
+def remove_emoji(text: str) -> str:
+    return EMOJI_PATTERN.sub("", text)
 
 
 def split_text_to_lines(text: str, max_chars: int) -> List[str]:
@@ -42,7 +55,7 @@ class ComposeService:
         self.assets_root = os.path.dirname(self.background_base_dir)
         self.sticker_dir = os.path.join(self.assets_root, "stickers")
 
-        # layout 設定（如果未來要用 JSON，可以直接把這份 dict dump 出去）
+        # layout 設定
         self.layout_config = {
             "center": {"name": "經典置中"},
             "top_bottom": {"name": "上下分佈"},
@@ -85,9 +98,122 @@ class ComposeService:
             return 128.0
         total = 0.0
         for r, g, b in pixels:
-            # 人眼感知亮度
             total += 0.2126 * r + 0.7152 * g + 0.0722 * b
         return total / len(pixels)
+
+    def _compute_luminance(self, rgb):
+        """計算單一顏色的亮度（0~255，用和估算背景差不多的公式）"""
+        r, g, b = rgb
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    def _pick_text_color(
+        self,
+        base_rgba,
+        bg_brightness: float,
+        prefer_light: bool = False,
+    ):
+        """
+        1. 先用原本的 _adjust_color_for_bg 做一次基礎調整
+        2. 再檢查對比，不夠就強制改成黑或白
+        """
+        # 先沿用你原本的調整邏輯
+        r, g, b, a = self._adjust_color_for_bg(
+            base_rgba, bg_brightness, prefer_light)
+        text_lum = self._compute_luminance((r, g, b))
+
+        MIN_DIFF = 80  # 對比門檻，可以自己再調整大一點/小一點
+
+        # 如果文字亮度跟背景亮度差太小 → 對比不足
+        if abs(text_lum - bg_brightness) < MIN_DIFF:
+            if bg_brightness >= 128:
+                # 背景偏亮 → 直接用接近黑色的字
+                r, g, b = 20, 20, 20
+            else:
+                # 背景偏暗 → 直接用接近白色的字
+                r, g, b = 245, 245, 245
+
+        return (r, g, b, a)
+
+    def _pick_stroke_color(self, text_rgba):
+        """
+        根據文字顏色自動選描邊顏色：
+        - 字很亮 → 用深色描邊
+        - 字很暗 → 用白色描邊
+        """
+        r, g, b, _ = text_rgba
+        lum = self._compute_luminance((r, g, b))
+
+        if lum > 150:
+            # 亮字 → 深描邊
+            return (0, 0, 0, 220)
+        else:
+            # 暗字 → 亮描邊
+            return (255, 255, 255, 220)
+
+    def _region_complexity(self, img: Image.Image, box: Tuple[int, int, int, int]) -> float:
+        """
+        估計某個矩形區域的複雜度：
+        這裡用亮度標準差，愈大代表細節愈多（不適合放字）
+        """
+        x1, y1, x2, y2 = box
+        crop = img.crop((int(x1), int(y1), int(x2), int(y2))).convert("L")
+        stat = ImageStat.Stat(crop)
+        if not stat.stddev:
+            return 0.0
+        return float(stat.stddev[0])
+
+    def _pick_best_layout(self, bg: Image.Image) -> str:
+        """
+        根據背景圖各區塊的「乾淨程度」來挑 layout：
+        複雜度最小的區域，就是最適合放字的 layout。
+        """
+        width, height = bg.size
+
+        # 每個 layout 可能用到的主要文字區域（可以之後再微調）
+        regions = {
+            "center": [
+                (width * 0.15, height * 0.28, width * 0.85, height * 0.65),
+            ],
+            "top_bottom": [
+                (width * 0.15, height * 0.10, width * 0.85, height * 0.28),  # 上面標題
+                (width * 0.15, height * 0.60, width * 0.85, height * 0.88),  # 下面副標
+            ],
+            "left_block": [
+                (width * 0.08, height * 0.20, width * 0.55, height * 0.80),
+            ],
+            "vertical": [
+                (width * 0.70, height * 0.15, width * 0.94, height * 0.82),
+            ],
+            "diagonal": [
+                (width * 0.18, height * 0.25, width * 0.82, height * 0.70),
+            ],
+        }
+
+        best_layout = None
+        best_score = None
+
+        for layout, boxes in regions.items():
+            if layout not in self.available_layouts:
+                continue
+
+            scores = []
+            for box in boxes:
+                scores.append(self._region_complexity(bg, box))
+
+            if not scores:
+                continue
+
+            avg_score = sum(scores) / len(scores)
+
+            if best_score is None or avg_score < best_score:
+                best_score = avg_score
+                best_layout = layout
+
+        if best_layout:
+            return best_layout
+
+        # 萬一都失敗，就退回原本的隨機
+        return random.choice(self.available_layouts)
 
     def _adjust_color_for_bg(
         self,
@@ -251,8 +377,10 @@ class ComposeService:
         elif corner == "bl":
             pos = (margin, bg.height - sticker.height - margin)
         else:
-            pos = (bg.width - sticker.width - margin,
-                   bg.height - sticker.height - margin)
+            pos = (
+                bg.width - sticker.width - margin,
+                bg.height - sticker.height - margin,
+            )
 
         bg.alpha_composite(sticker, dest=pos)
 
@@ -274,9 +402,20 @@ class ComposeService:
 
         - layout 為 None 或 "auto" 時，會在 available_layouts 之間隨機。
         - 目前只畫 title + subtitle，不畫 footer。
+        - 圖片上的文字不含 emoji（先移除避免字型畫不出來）。
         """
+
+        # 先把 emoji 拿掉，再畫到圖片上
+        title = remove_emoji(title)
+        subtitle = remove_emoji(subtitle)
+
         bg = self._choose_background(theme)
         width, height = bg.size
+
+        # 統一的安全邊界，避免文字太貼近圖片邊緣
+        safe_margin_x = int(width * 0.06)
+        safe_margin_y = int(height * 0.06)
+
         center_x = width // 2
 
         # 根據背景估計亮度，調整字色
@@ -284,32 +423,32 @@ class ComposeService:
         base_title = self._get_title_color(theme)
         base_subtitle = (60, 60, 60, 255)
 
-        title_color = self._adjust_color_for_bg(base_title, brightness)
-        subtitle_color = self._adjust_color_for_bg(
+        # 用新的方法選顏色：先微調，再強制確保對比
+        title_color = self._pick_text_color(base_title, brightness)
+        subtitle_color = self._pick_text_color(
             base_subtitle, brightness, prefer_light=True
         )
 
         # 字型
-        title_font_large = self._load_font(80)
-        title_font_normal = self._load_font(64)
-        subtitle_font = self._load_font(40)
+        title_font_large = self._load_font(90)
+        title_font_normal = self._load_font(72)
+        subtitle_font = self._load_font(45)
 
         title_lines = split_text_to_lines(title, max_chars=TITLE_MAX_CHARS)
         subtitle_lines = split_text_to_lines(
             subtitle, max_chars=SUBTITLE_MAX_CHARS
         )
 
-        # 畫外框當作 glow
+        # 外框 / glow
         stroke_width = 3
-        stroke_fill = (255, 255, 255, 210)
+        title_stroke = self._pick_stroke_color(title_color)
+        subtitle_stroke = self._pick_stroke_color(subtitle_color)
 
         # 決定實際要用的 layout
         if not layout or layout == "auto" or layout not in self.available_layouts:
-            layout = random.choice(self.available_layouts)
+            layout = self._pick_best_layout(bg)
 
-        # 有些 layout 要直接在 bg 上畫
-        if layout in ("center", "top_bottom", "left_block", "vertical"):
-            draw = ImageDraw.Draw(bg)
+        draw = ImageDraw.Draw(bg)
 
         if layout == "center":
             # 經典置中
@@ -323,9 +462,10 @@ class ComposeService:
                 line_spacing=6,
                 fill=title_color,
                 stroke_width=stroke_width,
-                stroke_fill=stroke_fill,
+                stroke_fill=title_stroke,
             )
             current_y += 10
+
             self._draw_lines_center(
                 draw,
                 subtitle_lines,
@@ -335,7 +475,7 @@ class ComposeService:
                 line_spacing=6,
                 fill=subtitle_color,
                 stroke_width=2,
-                stroke_fill=(0, 0, 0, 160),
+                stroke_fill=title_stroke,
             )
 
         elif layout == "top_bottom":
@@ -350,9 +490,10 @@ class ComposeService:
                 line_spacing=4,
                 fill=title_color,
                 stroke_width=stroke_width,
-                stroke_fill=stroke_fill,
+                stroke_fill=title_stroke,
             )
             subtitle_y = int(height * 0.62)
+
             self._draw_lines_center(
                 draw,
                 subtitle_lines,
@@ -362,106 +503,97 @@ class ComposeService:
                 line_spacing=4,
                 fill=subtitle_color,
                 stroke_width=2,
-                stroke_fill=(0, 0, 0, 160),
+                stroke_fill=title_stroke,
             )
 
         elif layout == "left_block":
-            # 左側區塊
-            margin_x = int(width * 0.12)
-            title_y = int(height * 0.22)
-            subtitle_y = title_y + 160
+            # 左側區塊：標題 + 內容都改成直式，靠左排
+            margin_x = safe_margin_x
+            top_y = safe_margin_y
 
-            self._draw_lines_left(
-                draw,
-                title_lines,
-                title_font_normal,
-                start_x=margin_x,
-                start_y=title_y,
-                line_spacing=4,
-                fill=title_color,
-                stroke_width=stroke_width,
-                stroke_fill=stroke_fill,
+            # 把多行合併成一串，再做直書；空白字元先拿掉
+            vertical_title = "".join(
+                ch for ch in "".join(title_lines) if not ch.isspace()
             )
-            self._draw_lines_left(
-                draw,
-                subtitle_lines,
-                subtitle_font,
-                start_x=margin_x,
-                start_y=subtitle_y,
-                line_spacing=4,
-                fill=subtitle_color,
-                stroke_width=2,
-                stroke_fill=(0, 0, 0, 160),
+            vertical_subtitle = "".join(
+                ch for ch in "".join(subtitle_lines) if not ch.isspace()
             )
 
-        elif layout == "vertical":
-            # 直書標題靠右，副標在下方
-            margin_x = int(width * 0.82)
-            top_y = int(height * 0.18)
-
+            # 標題直書在最左邊
             self._draw_vertical_text(
                 draw,
-                "".join(ch for ch in title if not ch.isspace()),
+                vertical_title,
                 title_font_normal,
                 x=margin_x,
                 start_y=top_y,
                 line_spacing=4,
                 fill=title_color,
                 stroke_width=stroke_width,
-                stroke_fill=stroke_fill,
+                stroke_fill=title_stroke,
             )
 
-            subtitle_y = int(height * 0.7)
-            self._draw_lines_center(
+            # 副標直書放在右邊一點的位置，形成兩欄直式
+            subtitle_x = margin_x + int(width * 0.06)
+            self._draw_vertical_text(
                 draw,
-                subtitle_lines,
+                vertical_subtitle,
                 subtitle_font,
-                center_x,
-                subtitle_y,
+                x=subtitle_x,
+                start_y=top_y,
                 line_spacing=4,
                 fill=subtitle_color,
                 stroke_width=2,
-                stroke_fill=(0, 0, 0, 160),
+                stroke_fill=title_stroke,
             )
 
-        elif layout == "diagonal":
-            # 斜斜的標題：先在小畫布上畫好，再整塊旋轉貼上去
-            block_w = int(width * 0.8)
-            block_h = int(height * 0.4)
-            block = Image.new("RGBA", (block_w, block_h), (0, 0, 0, 0))
-            b_draw = ImageDraw.Draw(block)
+        elif layout == "vertical":
+            # 直書標題 + 內容都靠右排成兩欄
+            top_y = safe_margin_y
 
-            block_center_x = block_w // 2
-            y = 10
-            y = self._draw_lines_center(
-                b_draw,
-                title_lines,
-                title_font_large,
-                block_center_x,
-                y,
+            # 估一個中文字寬度，避免貼到右邊
+            sample_char = "永"
+            title_bbox = draw.textbbox(
+                (0, 0), sample_char, font=title_font_normal, stroke_width=stroke_width)
+            title_char_w = title_bbox[2] - title_bbox[0]
+
+            subtitle_bbox = draw.textbbox(
+                (0, 0), sample_char, font=subtitle_font, stroke_width=2)
+            subtitle_char_w = subtitle_bbox[2] - subtitle_bbox[0]
+
+            # 最右邊放標題，再往左放副標
+            title_x = width - safe_margin_x - title_char_w
+            column_gap = max(int(width * 0.04),
+                             subtitle_char_w + int(width * 0.01))
+            subtitle_x = title_x - column_gap
+
+            vertical_title = "".join(ch for ch in "".join(
+                title_lines) if not ch.isspace())
+            vertical_subtitle = "".join(ch for ch in "".join(
+                subtitle_lines) if not ch.isspace())
+
+            self._draw_vertical_text(
+                draw,
+                vertical_title,
+                title_font_normal,
+                x=title_x,
+                start_y=top_y,
                 line_spacing=4,
                 fill=title_color,
                 stroke_width=stroke_width,
-                stroke_fill=stroke_fill,
+                stroke_fill=title_stroke,
             )
-            y += 6
-            self._draw_lines_center(
-                b_draw,
-                subtitle_lines,
+
+            self._draw_vertical_text(
+                draw,
+                vertical_subtitle,
                 subtitle_font,
-                block_center_x,
-                y,
+                x=subtitle_x,
+                start_y=top_y,
                 line_spacing=4,
                 fill=subtitle_color,
                 stroke_width=2,
-                stroke_fill=(0, 0, 0, 160),
+                stroke_fill=title_stroke,
             )
-
-            angle = random.choice([-18, -12, 12, 18])
-            rotated = block.rotate(angle, resample=Image.BICUBIC, expand=True)
-            bx = (width - rotated.width) // 2
-            by = (height - rotated.height) // 2
-            bg.alpha_composite(rotated, dest=(bx, by))
 
         # 最後可選地加一張貼紙
         self._maybe_add_sticker(bg)
