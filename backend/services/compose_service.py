@@ -344,6 +344,30 @@ class ComposeService:
             y += text_h + line_spacing
         return y
 
+    def _measure_vertical_text_height(
+        self,
+        draw: ImageDraw.ImageDraw,
+        text: str,
+        font: ImageFont.ImageFont,
+        line_spacing: int,
+        stroke_width: int = 0,
+    ) -> int:
+        """計算直書文字的總高度，方便做垂直置中"""
+        total = 0
+        first_char = True
+        for ch in text:
+            if ch.isspace():
+                continue
+            bbox = draw.textbbox(
+                (0, 0), ch, font=font, stroke_width=stroke_width
+            )
+            text_h = bbox[3] - bbox[1]
+            if not first_char:
+                total += line_spacing
+            total += text_h
+            first_char = False
+        return total
+
     def _maybe_add_sticker(self, bg: Image.Image) -> None:
         """
         如果 assets/stickers 下有 png/webp，就隨機挑一張貼在四個角其中一個
@@ -507,17 +531,46 @@ class ComposeService:
             )
 
         elif layout == "left_block":
-            # 左側區塊：標題 + 內容都改成直式，靠左排
+            # 左側區塊：標題 + 內容直書在左邊，英文改放下面橫排
             margin_x = safe_margin_x
-            top_y = safe_margin_y
 
-            # 把多行合併成一串，再做直書；空白字元先拿掉
+            # 只挑出要做直書的文字：非 ASCII（中文、全形符號），英文等留給橫排
+            title_source = "".join(title_lines)
+            subtitle_source = "".join(subtitle_lines)
+
             vertical_title = "".join(
-                ch for ch in "".join(title_lines) if not ch.isspace()
+                ch for ch in title_source
+                if not ch.isspace() and ord(ch) >= 128
             )
             vertical_subtitle = "".join(
-                ch for ch in "".join(subtitle_lines) if not ch.isspace()
+                ch for ch in subtitle_source
+                if not ch.isspace() and ord(ch) >= 128
             )
+
+            # 計算直書標題 / 內容的高度，讓整塊在上下方向置中
+            title_block_h = self._measure_vertical_text_height(
+                draw,
+                vertical_title,
+                title_font_normal,
+                line_spacing=4,
+                stroke_width=stroke_width,
+            )
+            subtitle_block_h = self._measure_vertical_text_height(
+                draw,
+                vertical_subtitle,
+                subtitle_font,
+                line_spacing=4,
+                stroke_width=2,
+            )
+            block_h = max(title_block_h, subtitle_block_h)
+            available_h = height - 2 * safe_margin_y
+
+            if block_h > 0 and block_h < available_h:
+                # 有空間 → 讓整個直書區塊上下置中
+                top_y = safe_margin_y + (available_h - block_h) // 2
+            else:
+                # 太長就從安全邊界開始畫，避免文字跑出圖外
+                top_y = safe_margin_y
 
             # 標題直書在最左邊
             self._draw_vertical_text(
@@ -532,8 +585,11 @@ class ComposeService:
                 stroke_fill=title_stroke,
             )
 
+            # 拉大欄距，讓標題跟內容不要太擠
+            column_gap = int(width * 0.09)
+            subtitle_x = margin_x + column_gap
+
             # 副標直書放在右邊一點的位置，形成兩欄直式
-            subtitle_x = margin_x + int(width * 0.06)
             self._draw_vertical_text(
                 draw,
                 vertical_subtitle,
@@ -545,6 +601,38 @@ class ComposeService:
                 stroke_width=2,
                 stroke_fill=title_stroke,
             )
+
+            # 額外：把英文集中畫在圖片下方置中，避免英文直書怪怪的
+            english_chars = [
+                ch
+                for ch in f"{title} {subtitle}"
+                if ch.isascii() and (ch.isalpha() or ch.isdigit() or ch.isspace())
+            ]
+            english_text = "".join(english_chars)
+            # 把多個空白縮成一個，避免空格亂七八糟
+            english_text = " ".join(english_text.split())
+
+            if english_text:
+                bbox = draw.textbbox(
+                    (0, 0),
+                    english_text,
+                    font=subtitle_font,
+                    stroke_width=2,
+                )
+                text_w = bbox[2] - bbox[0]
+                text_h = bbox[3] - bbox[1]
+
+                english_x = center_x - text_w // 2
+                english_y = height - safe_margin_y - text_h
+
+                draw.text(
+                    (english_x, english_y),
+                    english_text,
+                    font=subtitle_font,
+                    fill=subtitle_color,
+                    stroke_width=2,
+                    stroke_fill=subtitle_stroke,
+                )
 
         elif layout == "vertical":
             # 直書標題 + 內容都靠右排成兩欄
