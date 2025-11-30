@@ -1,27 +1,48 @@
-import React, { useState } from "react";
+"use client";
+
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Download, Sparkles, Heart, AlertCircle } from "lucide-react";
 
 const themes = [
-  { id: "morning", label: "早安" },
-  { id: "health", label: "健康" },
-  { id: "life", label: "生活 / 人生格言" },
-  { id: "festival_newyear", label: "節慶：新年" },
-  { id: "festival_christmas", label: "節慶：聖誕" },
-  { id: "festival_midautumn", label: "節慶：中秋" },
-  { id: "festival_lantern", label: "節慶：元宵" },
-  { id: "festival_common", label: "節慶：一般祝福" },
+  { id: "morning", label: "早安 ☀️", emoji: "☀️" },
+  { id: "health", label: "健康 💪", emoji: "💪" },
+  { id: "life", label: "生活格言 🌿", emoji: "🌿" },
+  { id: "festival_newyear", label: "節慶：新年 🧧", emoji: "🧧" },
+  { id: "festival_christmas", label: "節慶：聖誕 🎄", emoji: "🎄" },
+  { id: "festival_midautumn", label: "節慶：中秋 🥮", emoji: "🥮" },
+  { id: "festival_lantern", label: "節慶：元宵 🏮", emoji: "🏮" },
+  { id: "festival_common", label: "節慶：一般 🎊", emoji: "🎊" },
 ];
 
 const layouts = [
-  { id: "auto", label: "自動變換" },
-  { id: "center", label: "置中經典" },
-  { id: "top_bottom", label: "上下分佈" },
-  { id: "left_block", label: "左側文字" },
-  { id: "vertical", label: "直書標題" },
+  { id: "auto", label: "✨ 自動變換" },
+  { id: "center", label: "📍 置中經典" },
+  { id: "top_bottom", label: "⬆️⬇️ 上下分佈" },
+  { id: "left_block", label: "◀️ 左側文字" },
+  { id: "vertical", label: "📝 直書標題" },
 ];
 
 const API_BASE_URL = "http://localhost:8000";
 
-function App() {
+export default function ElderCardGenerator() {
   const [selectedTheme, setSelectedTheme] = useState("morning");
   const [selectedLayout, setSelectedLayout] = useState("auto");
   const [loading, setLoading] = useState(false);
@@ -55,7 +76,9 @@ function App() {
       setResult(data);
     } catch (err) {
       console.error(err);
-      setError(err.message || "發生未知錯誤，請稍後再試。");
+      setError(
+        err instanceof Error ? err.message : "發生未知錯誤，請稍後再試。"
+      );
     } finally {
       setLoading(false);
     }
@@ -69,178 +92,218 @@ function App() {
       themes.find((t) => t.id === result.theme)?.label || result.theme;
 
     link.href = `data:image/png;base64,${result.image_base64}`;
-    link.download = `elder-card-${themeLabel}-${Date.now()}.png`;
+    link.download = `長輩圖-${themeLabel}-${Date.now()}.png`;
 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  const selectedThemeEmoji =
+    themes.find((t) => t.id === selectedTheme)?.emoji || "💌";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-slate-50 to-sky-100">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-amber-50 to-rose-50">
+      <div className="container mx-auto px-4 py-8 md:py-12">
         {/* Header */}
-        <header className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-800">
+        <div className="mb-8 text-center">
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <span className="text-5xl">{selectedThemeEmoji}</span>
+            <h1 className="bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 bg-clip-text text-4xl font-bold tracking-tight text-transparent md:text-5xl">
               長輩圖生成器
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              選擇主題與版型，一鍵產生長輩最愛的祝福小卡 💌
-            </p>
+            <span className="text-5xl">{selectedThemeEmoji}</span>
           </div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs text-slate-500 backdrop-blur">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            Gemini 文案生成中
-          </span>
-        </header>
+          <p className="text-balance text-lg text-muted-foreground">
+            用 AI 輕鬆生成溫馨祝福圖片 · 一鍵分享愛與關心 💝
+          </p>
+          <Badge variant="secondary" className="mt-3 gap-1.5">
+            <Sparkles className="h-3 w-3" />由 Gemini 智能生成文案
+          </Badge>
+        </div>
 
-        {/* Main layout */}
-        <main className="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)]">
-          {/* 左側：控制面板 */}
-          <section className="h-max rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur">
-            <h2 className="mb-4 text-base font-semibold text-slate-700">
-              1. 選擇主題與版型
-            </h2>
-
-            <div className="space-y-4">
-              {/* 主題選單 */}
-              <div className="space-y-1.5">
-                <label
+        <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-2">
+          {/* Left Panel - Controls */}
+          <Card className="border-2 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <span className="text-2xl">🎨</span>
+                選擇主題與風格
+              </CardTitle>
+              <CardDescription>
+                挑選你喜歡的主題和排版，讓 AI 為你生成專屬祝福圖
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label
                   htmlFor="theme-select"
-                  className="text-sm font-medium text-slate-700"
+                  className="text-base font-semibold"
                 >
                   長輩圖主題
-                </label>
-                <select
-                  id="theme-select"
-                  value={selectedTheme}
-                  onChange={(e) => setSelectedTheme(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none ring-0 focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
-                >
-                  {themes.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
+                </Label>
+                <Select value={selectedTheme} onValueChange={setSelectedTheme}>
+                  <SelectTrigger id="theme-select" className="h-11">
+                    <SelectValue placeholder="選擇主題" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {themes.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* 排版選單 */}
-              <div className="space-y-1.5">
-                <label
+              <div className="space-y-3">
+                <Label
                   htmlFor="layout-select"
-                  className="text-sm font-medium text-slate-700"
+                  className="text-base font-semibold"
                 >
                   文字排版風格
-                </label>
-                <select
-                  id="layout-select"
+                </Label>
+                <Select
                   value={selectedLayout}
-                  onChange={(e) => setSelectedLayout(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none ring-0 focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+                  onValueChange={setSelectedLayout}
                 >
-                  {layouts.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-slate-500">
-                  「自動變換」會在多種版型之間隨機切換；也可以指定喜歡的排版。
+                  <SelectTrigger id="layout-select" className="h-11">
+                    <SelectValue placeholder="選擇排版" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {layouts.map((l) => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {l.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  💡 選擇「自動變換」會根據背景智能選擇最佳排版
                 </p>
               </div>
 
-              <button
-                className="inline-flex items-center justify-center rounded-full bg-amber-500 px-6 py-2 text-sm font-semibold text-white shadow-md shadow-amber-200 transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-amber-300"
+              <Button
+                className="h-12 w-full text-base font-semibold"
+                size="lg"
                 onClick={handleGenerate}
                 disabled={loading}
               >
                 {loading ? (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/60 border-t-transparent" />
-                    生成中…
-                  </span>
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    AI 生成中...
+                  </>
                 ) : (
-                  "生成長輩圖"
+                  <>
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    立即生成長輩圖
+                  </>
                 )}
-              </button>
+              </Button>
 
               {error && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-                  ⚠️ {error}
-                </div>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
-              <div className="mt-4 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                小提醒：生成好的圖片可以直接下載後傳到 Line、Messenger
-                給家人朋友。
-              </div>
-            </div>
-          </section>
-
-          {/* 右側：預覽區 */}
-          <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur">
-            <h2 className="text-base font-semibold text-slate-700">
-              2. 文案與長輩圖預覽
-            </h2>
-
-            {!result && (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center text-sm text-slate-500">
-                <span className="text-3xl">👵👴</span>
-                <p>
-                  選一個主題與排版風格，點擊「生成長輩圖」，這裡會顯示文案與圖片預覽。
-                </p>
-              </div>
-            )}
-
-            {result && (
-              <>
-                {/* 文案區 */}
-                <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-lg font-semibold text-slate-800">
-                      {result.text.title}
-                    </h3>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">
-                      版型：
-                      {layouts.find((l) => l.id === result.layout)?.label ??
-                        result.layout}
-                    </span>
+              <Card className="border-amber-200 bg-amber-50/50">
+                <CardContent className="p-4">
+                  <div className="flex gap-3">
+                    <Heart className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
+                    <div className="space-y-1 text-sm">
+                      <p className="font-medium text-amber-900">溫馨小提醒</p>
+                      <p className="text-amber-800">
+                        生成後可直接下載，傳到 LINE、Facebook 給親朋好友！
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {result.text.subtitle}
-                  </p>
-                  {/* 如果不想在網頁上看到 footer，可以把下面註解留著 */}
-                  {/* <p className="mt-2 text-xs text-slate-500">
-                    {result.text.footer}
-                  </p> */}
-                </div>
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
 
-                {/* 圖片預覽 + 下載 */}
-                <div className="flex flex-1 flex-col items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-4">
-                  <div className="w-full max-w-[480px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <img
-                      src={`data:image/png;base64,${result.image_base64}`}
-                      alt="Generated elder card"
-                      className="block w-full"
-                    />
+          {/* Right Panel - Preview */}
+          <Card className="border-2 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <span className="text-2xl">👀</span>
+                預覽與下載
+              </CardTitle>
+              <CardDescription>
+                文案與圖片即時預覽，滿意就下載分享吧！
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!result ? (
+                <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed bg-muted/30 p-8 text-center">
+                  <div className="text-6xl">👵👴</div>
+                  <div className="space-y-2">
+                    <p className="text-lg font-medium">準備好了嗎？</p>
+                    <p className="text-balance text-sm text-muted-foreground">
+                      選擇主題和排版風格，點擊「立即生成」按鈕
+                      <br />
+                      AI 會為你創造獨一無二的祝福圖片 ✨
+                    </p>
                   </div>
-
-                  <button
-                    className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-600"
-                    onClick={handleDownload}
-                  >
-                    下載圖片（PNG）
-                  </button>
                 </div>
-              </>
-            )}
-          </section>
-        </main>
+              ) : (
+                <div className="space-y-4">
+                  {/* Text Preview */}
+                  <Card className="border-primary/20 bg-gradient-to-br from-background to-primary/5">
+                    <CardContent className="space-y-3 p-5">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="text-balance text-xl font-bold leading-tight text-foreground">
+                          {result.text.title}
+                        </h3>
+                        <Badge variant="outline" className="shrink-0 text-xs">
+                          {layouts
+                            .find((l) => l.id === result.layout)
+                            ?.label.replace(/[✨📍⬆️⬇️◀️📝]/gu, "")
+                            .trim() ?? result.layout}
+                        </Badge>
+                      </div>
+                      <p className="text-pretty text-base leading-relaxed text-muted-foreground">
+                        {result.text.subtitle}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Image Preview */}
+                  <div className="space-y-3">
+                    <div className="overflow-hidden rounded-lg border-2 bg-muted/30 p-2">
+                      <div className="overflow-hidden rounded-md bg-white shadow-inner">
+                        <img
+                          src={`data:image/png;base64,${result.image_base64}`}
+                          alt="生成的長輩圖"
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      className="h-11 w-full text-base font-semibold"
+                      variant="default"
+                      size="lg"
+                      onClick={handleDownload}
+                    >
+                      <Download className="mr-2 h-5 w-5" />
+                      下載圖片（PNG）
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-12 text-center text-sm text-muted-foreground">
+          <p>用愛與科技，讓每一份祝福都更有溫度 ❤️</p>
+        </div>
       </div>
     </div>
   );
 }
-
-export default App;
