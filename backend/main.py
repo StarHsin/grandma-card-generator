@@ -16,7 +16,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
 BACKGROUND_BASE_DIR = BASE_DIR / "assets" / "backgrounds"
-FONT_PATH = r"C:\Windows\Fonts\msjh.ttc"
+FONT_PATH = str(BASE_DIR / "assets" / "fonts" / "edukai-5.0.ttf")
 
 # 主題
 ALLOWED_THEMES = {
@@ -47,6 +47,7 @@ app = FastAPI(title="Elder Card Generator API")
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://grandma-card-generator.vercel.app/"
 ]
 
 app.add_middleware(
