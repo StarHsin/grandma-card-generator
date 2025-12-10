@@ -59,7 +59,7 @@ class LLMService:
         )
 
         # 可調整成你想用的模型
-        self.model_name = "gemini-2.0-flash"
+        self.model_name = "gemini-2.5-flash"
 
         # 主題說明
         self.theme_descriptions: Dict[str, str] = {
@@ -182,7 +182,7 @@ JSON 格式如下：
                     "response_mime_type": "application/json",
                     "temperature": 0.9,      # 調高一點，讓表達更有變化
                     "top_p": 0.95,
-                    "max_output_tokens": 400,
+                    "max_output_tokens": 2048,
                 },
             )
 
