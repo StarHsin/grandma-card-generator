@@ -235,7 +235,7 @@ def handle_message(event: MessageEvent):
     # 這裡假設使用者輸入任何文字都視為 Prompt 或主題
     # 為了簡化，我們嘗試把 user_text 當作 theme，如果不在 ALLOWED_THEMES 裡，就預設用 'life' 或 'morning'
 
-    keywords = ["長輩圖", "祝福", "早安", "晚安", "幫我做"]
+    keywords = ["健康", "生活格言", "早安", "節慶", "新年", "聖誕節"]
 
     # 檢查 user_text 是否包含任一關鍵字
     is_trigger = any(k in user_text for k in keywords)
