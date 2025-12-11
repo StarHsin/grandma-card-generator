@@ -62,8 +62,12 @@ class LLMService:
         # self.model_name = "gemini-2.5-flash"
         # 邏輯：先試 2.0 Flash (最新但有額度限制)，失敗就自動轉 1.5 Flash (穩定且額度高)
         self.model_candidates = [
-            "gemini-2.0-flash",
+            # "gemini-2.0-flash",
             "gemini-2.5-flash",
+            "gemini-2.0-flash-exp",
+            "gemini-2.0-flash-lite",
+            "gemini-flash-latest",
+            "gemini-pro-latest",
         ]
 
         # 主題說明
