@@ -59,7 +59,12 @@ class LLMService:
         )
 
         # 可調整成你想用的模型
-        self.model_name = "gemini-2.5-flash"
+        # self.model_name = "gemini-2.5-flash"
+        # 邏輯：先試 2.0 Flash (最新但有額度限制)，失敗就自動轉 1.5 Flash (穩定且額度高)
+        self.model_candidates = [
+            "gemini-2.0-flash",
+            "gemini-2.5-flash",
+        ]
 
         # 主題說明
         self.theme_descriptions: Dict[str, str] = {
@@ -156,8 +161,8 @@ JSON 格式如下：
 
         return ElderCardText(
             title="送上暖暖的祝福",
-            subtitle="不管今天忙不忙，都別忘了幫自己留一點喘口氣的時間。",
-            footer="把這張充滿祝福的小卡，傳給你在乎的人吧 ❤️",
+            subtitle="別忘了幫自己留一點喘口氣的時間。",
+            footer="傳給你在乎的人吧",
         )
 
     # --------- 對外主方法 ---------
@@ -174,57 +179,67 @@ JSON 格式如下：
         style = random.choice(self.style_variants)  # 每次隨機一種風格
         prompt = self._build_prompt(theme, style)
 
-        try:
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-                config={
-                    "response_mime_type": "application/json",
-                    "temperature": 0.9,      # 調高一點，讓表達更有變化
-                    "top_p": 0.95,
-                    "max_output_tokens": 2048,
-                },
-            )
+        # ✅ 開始迴圈：依序嘗試每個模型
+        for model_name in self.model_candidates:
+            try:
+                print(f"[LLMService] Trying model: {model_name}...")
 
-            raw_text = response.text.strip()
-            print("[LLMService] Gemini raw response:", raw_text)
+                response = self.client.models.generate_content(
+                    model=model_name,  # 這裡改用迴圈當下的 model_name
+                    contents=prompt,
+                    config={
+                        "response_mime_type": "application/json",
+                        "temperature": 0.9,
+                        "top_p": 0.95,
+                        "max_output_tokens": 2048,
+                    },
+                )
 
-            data = json.loads(raw_text)
+                raw_text = response.text.strip()
+                # print(f"[LLMService] Response from {model_name}: success!")
 
-            # ① 如果是 list，就取第一個元素
-            if isinstance(data, list):
-                if not data:
-                    return self._fallback(theme)
-                data = data[0]
+                data = json.loads(raw_text)
 
-            # ② 如果最後還不是 dict，就放棄用 fallback
-            if not isinstance(data, dict):
-                return self._fallback(theme)
+                if isinstance(data, list):
+                    if not data:
+                        # 如果這個模型回傳空陣列，視為失敗，嘗試下一個
+                        print(
+                            f"[LLMService] {model_name} returned empty list, skipping.")
+                        continue
+                    data = data[0]
 
-            title = str(data.get("title", "")).strip()
-            subtitle = str(data.get("subtitle", "")).strip()
-            footer = str(data.get("footer", "")).strip()
+                if not isinstance(data, dict):
+                    # 格式不對，嘗試下一個
+                    print(
+                        f"[LLMService] {model_name} returned invalid format, skipping.")
+                    continue
 
-            if not title or not subtitle or not footer:
-                return self._fallback(theme)
+                title = str(data.get("title", "")).strip()
+                subtitle = str(data.get("subtitle", "")).strip()
+                footer = str(data.get("footer", "")).strip()
 
-            # ===== 新增這裡：強制截斷與防護 =====
+                # 簡單防呆與截斷 (建議加上剛剛教你的防呆邏輯)
+                if len(subtitle) > 12:
+                    subtitle = subtitle[:11] + "…"
+                if len(title) > 8:
+                    title = title[:8]
+                if len(footer) > 20:
+                    footer = footer[:19] + "…"
 
-            # 如果 subtitle 超過 12 字，強制切斷並加 ... (或是只取前 12 字)
-            if len(subtitle) > 12:
-                # 簡單截斷，避免破版
-                subtitle = subtitle[:11] + "…"
+                if not title or not subtitle or not footer:
+                    continue  # 欄位缺失，視為失敗，換下一個
 
-            # Title 也可以防護一下
-            if len(title) > 10:
-                title = title[:8]
+                # 🎉 成功！直接回傳結果，結束迴圈
+                return ElderCardText(title=title, subtitle=subtitle, footer=footer)
 
-            # Footer 防護
-            if len(footer) > 20:
-                footer = footer[:19] + "…"
+            except Exception as e:
+                # 🚨 這裡捕捉錯誤 (例如 429 額度滿了)
+                print(
+                    f"[LLMService] Model {model_name} failed with error: {e}")
+                print(f"[LLMService] Switching to next model...")
+                # 繼續迴圈 (continue)，嘗試清單裡的下一個模型
+                continue
 
-            return ElderCardText(title=title, subtitle=subtitle, footer=footer)
-
-        except Exception as e:
-            print(f"[LLMService] Gemini error: {e}")
-            return self._fallback(theme)
+        # ❌ 如果迴圈跑完了，所有模型都失敗，才使用 Fallback 模板
+        print("[LLMService] All models failed. Using fallback template.")
+        return self._fallback(theme)
