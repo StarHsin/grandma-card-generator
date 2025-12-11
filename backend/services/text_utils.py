@@ -22,6 +22,6 @@ def split_text_to_lines(text: str, max_chars: int) -> List[str]:
     return [text[i: i + max_chars] for i in range(0, len(text), max_chars)]
 
 
-TITLE_MAX_CHARS = 12
-SUBTITLE_MAX_CHARS = 20
-FOOTER_MAX_CHARS = 24  # 目前不畫 footer，但保留常數方便之後擴充
+TITLE_MAX_CHARS = 10
+SUBTITLE_MAX_CHARS = 12
+FOOTER_MAX_CHARS = 18  # 目前不畫 footer，但保留常數方便之後擴充
