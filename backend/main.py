@@ -325,7 +325,7 @@ def handle_message(event: MessageEvent):
             title=elder_text.title,
             subtitle=elder_text.subtitle,
             footer=elder_text.footer,
-            layout="center"
+            layout="auto"
         )
 
         # 3. 將 Base64 轉存為實體檔案
