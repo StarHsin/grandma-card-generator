@@ -76,7 +76,7 @@ class ComposeService:
         # 地獄梗 -> 用早安圖 (反差最大)
         # 壞了 -> 用健康圖 (身體健康 vs 系統壞了)
         target_theme = theme
-        if theme in ["dark_humor", "broken_egg", "programmer"]:
+        if theme in ["dark_humor", "broken_egg", "programmer", "lotus", "rebel"]:
             target_theme = random.choice(["morning", "life"])
 
         theme_dir = os.path.join(self.background_base_dir, target_theme)

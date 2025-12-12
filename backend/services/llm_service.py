@@ -68,6 +68,9 @@ class LLMService:
             "gemini-2.0-flash-lite",
             "gemini-flash-latest",
             "gemini-pro-latest",
+            "gemini-2.0-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-robotics-er-1.5-preview"
         ]
 
         # 主題說明
@@ -154,6 +157,22 @@ class LLMService:
             - Subtitle: "PM 說這只是一個小功能，改一下很快。"
             
             請保持長輩圖的格式，但內容要是工程師的痛點。
+            """
+
+        # === [新增] 彩蛋 ：逆襲/躺平模式 ===
+        elif theme == "rebel":
+            theme_desc = "這是一張外表像傳統長輩圖，但內容是『年輕人對社會的無奈與躺平主義』的反諷圖。"
+            style = "表面溫馨勵志，實則偷懶厭世"
+            extra_instructions = """
+            請產生一種『反差萌』的文案：
+            1. Title 看起來很勵志（如：堅持到底、努力不懈）。
+            2. Subtitle 實際上很厭世或想偷懶（如：反正薪水也不會漲，不如多睡一點）。
+            3. Footer 提出實際請求（如：阿姨我不想努力了、紅包請包大包一點）。
+            
+            範例：
+            - Title: 莫忘初衷
+            - Subtitle: 我的初衷就是不工作。
+            - Footer: 匯款帳號在下面
             """
 
         else:
