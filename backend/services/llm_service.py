@@ -222,7 +222,7 @@ JSON 格式如下：
                 subtitle = str(data.get("subtitle", "")).strip()
                 footer = str(data.get("footer", "")).strip()
 
-                # 簡單防呆與截斷 (建議加上剛剛教你的防呆邏輯)
+                # 簡單防呆與截斷
                 if len(subtitle) > 12:
                     subtitle = subtitle[:11] + "…"
                 if len(title) > 10:
