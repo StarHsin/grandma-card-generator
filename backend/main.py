@@ -295,8 +295,14 @@ def handle_message(event: MessageEvent):
     DAILY_USAGE_STATS[today_str][user_id] = user_today_count + 1
 
     target_theme = "life"  # 預設
+
     # 簡單的關鍵字對應 (您可以做得更複雜)
-    if "早" in user_text:
+    if any(k in user_text for k in ["壞了", "爛", "老了", "失敗"]):
+        target_theme = "broken_egg"
+    # 2. 彩蛋 B：地獄梗
+    elif any(k in user_text for k in ["地獄", "負能量", "厭世", "不想努力"]):
+        target_theme = "dark_humor"
+    elif "早" in user_text:
         target_theme = "morning"
     elif "健康" in user_text:
         target_theme = "health"
@@ -309,15 +315,17 @@ def handle_message(event: MessageEvent):
     elif "新年" in user_text:
         target_theme = "festival_newyear"
 
-    # 或者如果使用者直接打英文 key (例如 "morning")
-    if user_text in ALLOWED_THEMES:
-        target_theme = user_text
-
-    print(f"LINE User Input: {user_text}, Detected Theme: {target_theme}")
+    # [重要] 這裡要放行特殊彩蛋主題，避免被 ALLOWED_THEMES 擋住
+    # 如果 target_theme 是彩蛋，我們就不檢查 ALLOWED_THEMES
+    if target_theme not in ["broken_egg", "dark_humor"] and target_theme not in ALLOWED_THEMES:
+        # 如果不是彩蛋，也不是允許的主題，才做過濾 (原本的邏輯)
+        pass
 
     try:
         # 1. 呼叫 LLM 服務 (同步呼叫)
         elder_text = llm_service.generate_text(target_theme)
+
+        forced_layout = "center" if target_theme == "dark_humor" else "auto"
 
         # 2. 呼叫合成服務 (layout 自動)
         image_base64 = compose_service.compose_image(
@@ -325,7 +333,7 @@ def handle_message(event: MessageEvent):
             title=elder_text.title,
             subtitle=elder_text.subtitle,
             footer=elder_text.footer,
-            layout="auto"
+            layout=forced_layout
         )
 
         # 3. 將 Base64 轉存為實體檔案

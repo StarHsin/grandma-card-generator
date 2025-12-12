@@ -69,6 +69,14 @@ class ComposeService:
         return ImageFont.load_default()
 
     def _choose_background(self, theme: str) -> Image.Image:
+        # === [新增] 背景圖映射邏輯 ===
+        # 如果是特殊彩蛋，強制借用別人的背景圖
+        # 地獄梗 -> 用早安圖 (反差最大)
+        # 壞了 -> 用健康圖 (身體健康 vs 系統壞了)
+        target_theme = theme
+        if theme in ["dark_humor", "broken_egg"]:
+            target_theme = random.choice(["morning", "life"])
+
         theme_dir = os.path.join(self.background_base_dir, theme)
         pattern = os.path.join(theme_dir, "*.*")
         candidates = glob.glob(pattern)

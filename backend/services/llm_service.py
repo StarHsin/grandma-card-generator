@@ -120,9 +120,25 @@ class LLMService:
             theme, "一般祝福，內容溫暖、正向、適合傳給親友。"
         )
 
+        # 先定義特殊的 Prompt 補充說明
+        extra_instructions = ""
+
         # 針對新年主題，強制加入生肖提示
         if theme == "festival_newyear":
             theme_desc = f"{base_desc} 請注意：{zodiac_info} 文案中請務必包含該生肖的吉祥話（例如該生肖行大運），不要寫錯年份。"
+
+        elif theme == "dark_humor":
+            theme_desc = "這是一張『毒雞湯』風格的長輩圖。外表溫馨，但文字內容充滿對生活、工作、薪水的無奈與諷刺。"
+            style = "極度厭世、腹黑、反諷"
+            extra_instructions = """
+            請撰寫讓年輕人看了會苦笑的『負能量』金句。
+            範例方向：
+            - 努力不一定會成功，但不努力會很輕鬆。
+            - 雖然你薪水低，但是你工時長啊。
+            - 跌倒了別急著站起來，先躺一下比較舒服。
+            
+            格式要求同樣為 JSON，Title 要像長輩圖的勸世口吻，但 Subtitle 要突然轉折成負能量。
+            """
         else:
             theme_desc = base_desc
 
@@ -210,6 +226,13 @@ JSON 格式如下：
 
         style = random.choice(self.style_variants)  # 每次隨機一種風格
         prompt = self._build_prompt(theme, style)
+
+        if theme == "broken_egg":
+            return ElderCardText(
+                title="誰說這壞了？",
+                subtitle="這系統可真是太棒了！",
+                footer="—— 來自何老師的邪惡梔子花計畫"
+            )
 
         # ✅ 開始迴圈：依序嘗試每個模型
         for model_name in self.model_candidates:
