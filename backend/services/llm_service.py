@@ -225,8 +225,8 @@ JSON 格式如下：
                 # 簡單防呆與截斷 (建議加上剛剛教你的防呆邏輯)
                 if len(subtitle) > 12:
                     subtitle = subtitle[:11] + "…"
-                if len(title) > 8:
-                    title = title[:8]
+                if len(title) > 10:
+                    title = title[:10]
                 if len(footer) > 20:
                     footer = footer[:19] + "…"
 
