@@ -13,6 +13,7 @@ from .text_utils import (
     TITLE_MAX_CHARS,
     SUBTITLE_MAX_CHARS,
     FOOTER_MAX_CHARS,
+    apply_deep_fry,
 )
 from .graphics_utils import (
     estimate_brightness,
@@ -110,12 +111,17 @@ class ComposeService:
         - 目前只畫 title + subtitle，不畫 footer。
         - 圖片上的文字不含 emoji（先移除避免字型畫不出來）。
         """
+        # === [新增] 處理 theme 後綴 ===
+        # 如果 theme 包含 "_retro"，先把它還原成正常的資料夾名稱來找背景
+        real_theme = theme
+        if "_retro" in theme:
+            real_theme = theme.replace("_retro", "")
 
         # 先把 emoji 拿掉，再畫到圖片上
         title = remove_emoji(title)
         subtitle = remove_emoji(subtitle)
 
-        bg = self._choose_background(theme)
+        bg = self._choose_background(real_theme)
         width, height = bg.size
 
         # 統一的安全邊界，避免文字太貼近圖片邊緣
@@ -126,7 +132,7 @@ class ComposeService:
 
         # 根據背景估計亮度，調整字色
         brightness = estimate_brightness(bg)
-        base_title = self._get_title_color(theme)
+        base_title = self._get_title_color(real_theme)
         base_subtitle = (60, 60, 60, 255)
 
         # 用新的方法選顏色：先微調，再強制確保對比
@@ -370,6 +376,9 @@ class ComposeService:
 
         # 最後可選地加一張貼紙
         maybe_add_sticker(bg, self.sticker_dir)
+
+        if "old" in theme or "retro" in theme or "復古" in title:
+            bg = apply_deep_fry(bg)
 
         # 轉成 base64
         buffer = io.BytesIO()

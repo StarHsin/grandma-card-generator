@@ -236,7 +236,7 @@ def handle_message(event: MessageEvent):
     # 為了簡化，我們嘗試把 user_text 當作 theme，如果不在 ALLOWED_THEMES 裡，就預設用 'life' 或 'morning'
 
     keywords = ["健康", "生活格言", "早安", "節慶", "新年", "聖誕節",
-                "壞了", "爛", "老了", "失敗", "地獄", "負能量", "厭世", "不想努力"]
+                "壞了", "爛", "老了", "失敗", "地獄", "負能量", "厭世", "不想努力", "開", "炸", "retro"]
 
     # 檢查 user_text 是否包含任一關鍵字
     is_trigger = any(k in user_text for k in keywords)
@@ -323,6 +323,11 @@ def handle_message(event: MessageEvent):
     elif "新年" in user_text:
         target_theme = "festival_newyear"
 
+    if any(k in user_text for k in ["開", "炸", "retro"]):
+        target_theme += "_retro"
+
+    clean_theme = target_theme.replace("_retro", "")
+
     # [重要] 這裡要放行特殊彩蛋主題，避免被 ALLOWED_THEMES 擋住
     # 如果 target_theme 是彩蛋，我們就不檢查 ALLOWED_THEMES
     if target_theme not in ["broken_egg", "dark_humor"] and target_theme not in ALLOWED_THEMES:
@@ -331,7 +336,7 @@ def handle_message(event: MessageEvent):
 
     try:
         # 1. 呼叫 LLM 服務 (同步呼叫)
-        elder_text = llm_service.generate_text(target_theme)
+        elder_text = llm_service.generate_text(clean_theme)
 
         forced_layout = "center" if target_theme == "dark_humor" else "auto"
 
