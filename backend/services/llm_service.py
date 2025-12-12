@@ -3,7 +3,7 @@ import os
 import random
 from dataclasses import dataclass
 from typing import Dict, Optional
-
+import datetime
 from google import genai
 
 
@@ -91,12 +91,40 @@ class LLMService:
             "溫暖療癒",
         ]
 
+    def _get_zodiac_context(self) -> str:
+        """
+        計算當前年份與生肖。
+        如果月份 >= 11，視為準備過明年農曆年。
+        """
+        now = datetime.datetime.now()
+        year = now.year
+
+        # 如果是 11, 12 月，通常大家都在求「明年」的新年祝福了
+        if now.month >= 11:
+            year += 1
+
+        # 生肖對照表 (2025是蛇年，2025%12=9)
+        # 餘數對應：0猴, 1雞, 2狗, 3豬, 4鼠, 5牛, 6虎, 7兔, 8龍, 9蛇, 10馬, 11羊
+        zodiacs = ["猴", "雞", "狗", "豬", "鼠", "牛", "虎", "兔", "龍", "蛇", "馬", "羊"]
+        zodiac_char = zodiacs[year % 12]
+
+        return f"現在是（或即將迎接）{year} 年，也就是「{zodiac_char}年」。"
+
     # --------- prompt 組裝 ---------
 
     def _build_prompt(self, theme: str, style: str) -> str:
-        theme_desc = self.theme_descriptions.get(
+        # 1. 取得時間與生肖資訊
+        zodiac_info = self._get_zodiac_context()
+
+        base_desc = self.theme_descriptions.get(
             theme, "一般祝福，內容溫暖、正向、適合傳給親友。"
         )
+
+        # 針對新年主題，強制加入生肖提示
+        if theme == "festival_newyear":
+            theme_desc = f"{base_desc} 請注意：{zodiac_info} 文案中請務必包含該生肖的吉祥話（例如該生肖行大運），不要寫錯年份。"
+        else:
+            theme_desc = base_desc
 
         instructions = f"""
 你是一位擅長幫人寫 Line 「長輩圖」祝福文字的文案設計師。
@@ -108,7 +136,6 @@ class LLMService:
 風格要求：
 - 使用臺灣常見的繁體中文用語。
 - 口吻溫暖、關心，可以帶一點可愛或幽默，但不要太油膩。
-- 可以適度使用 emoji，但整體不要超過 3 個。
 - 讓長輩看到會想轉傳給朋友或家人的感覺。
 - 儘量避免每次都出現以下常見句型：
   - 「又是嶄新的一天」
@@ -117,13 +144,14 @@ class LLMService:
   請多變換用詞與句型，讓每一張圖的文字有明顯差異。
 
 輸出結構：
-- title：8～10 個字左右，適合作為長輩圖主標題，語氣正向、簡潔有力。
+- title：【絕對不超過 10 個字】。適合作為長輩圖主標題，語氣正向、簡潔有力。
 - subtitle：【絕對不超過 12 個字】。只能是一句短語，不要寫兩句。
 - footer：15 個字以內，簡短的行動呼籲。
 
 注意：
 - 一律使用繁體中文。
 - 不要出現色情、暴力、仇恨或歧視內容。
+- 不要使用 emoji。
 - 最後「只輸出 JSON」，不要任何多餘解釋或文字。
 JSON 格式如下：
 
