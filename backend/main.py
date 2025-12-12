@@ -235,7 +235,8 @@ def handle_message(event: MessageEvent):
     # 這裡假設使用者輸入任何文字都視為 Prompt 或主題
     # 為了簡化，我們嘗試把 user_text 當作 theme，如果不在 ALLOWED_THEMES 裡，就預設用 'life' 或 'morning'
 
-    keywords = ["健康", "生活格言", "早安", "節慶", "新年", "聖誕節"]
+    keywords = ["健康", "生活格言", "早安", "節慶", "新年", "聖誕節",
+                "壞了", "爛", "老了", "失敗", "地獄", "負能量", "厭世", "不想努力"]
 
     # 檢查 user_text 是否包含任一關鍵字
     is_trigger = any(k in user_text for k in keywords)
@@ -246,6 +247,13 @@ def handle_message(event: MessageEvent):
     if not (is_trigger or is_theme_command):
         # 如果不是關鍵字，也不是指令，直接結束函式
         # 這樣就不會呼叫 llm_service，完全不消耗 Google API
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(
+                    text=f"關鍵字錯誤，找不到這個指令。")]
+            )
+        )
         return
 
     # A. 檢查冷卻時間 (Cooldown)

@@ -148,6 +148,7 @@ class LLMService:
 本次風格設定：
 - 主題：{theme_desc}
 - 整體語氣：偏向「{style}」的感覺。
+{extra_instructions}
 
 風格要求：
 - 使用臺灣常見的繁體中文用語。
