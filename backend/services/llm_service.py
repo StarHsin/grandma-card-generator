@@ -139,6 +139,23 @@ class LLMService:
             
             格式要求同樣為 JSON，Title 要像長輩圖的勸世口吻，但 Subtitle 要突然轉折成負能量。
             """
+
+        # === [新增] 彩蛋 ：工程師/社畜模式 ===
+        elif theme == "programmer":
+            theme_desc = "工程師的崩潰日常，或是寫程式的辛酸血淚。雖然很累，但還是要假裝正能量。"
+            style = "表面笑嘻嘻，內心MMP (無奈幽默)"
+            extra_instructions = """
+            請撰寫工程師或程式設計師才懂的梗。
+            範例方向：
+            - Title: "早安 0 Error 0 Warning" (模仿編譯成功)
+            - Subtitle: "改了一行 Code，壞了整個專案，新的一天又開始了。"
+            - Footer: "願你的 Server 永遠不當機 🙏"
+            - Title: "需求又改了"
+            - Subtitle: "PM 說這只是一個小功能，改一下很快。"
+            
+            請保持長輩圖的格式，但內容要是工程師的痛點。
+            """
+
         else:
             theme_desc = base_desc
 

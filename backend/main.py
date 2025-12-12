@@ -231,15 +231,18 @@ def handle_message(event: MessageEvent):
     user_text = event.message.text
     user_id = event.source.user_id
 
+    user_text_lower = user_text.lower()
+
     # 簡單過濾：如果使用者輸入太短，可能不是要產生長輩圖，可以忽略或設為預設主題
     # 這裡假設使用者輸入任何文字都視為 Prompt 或主題
     # 為了簡化，我們嘗試把 user_text 當作 theme，如果不在 ALLOWED_THEMES 裡，就預設用 'life' 或 'morning'
 
     keywords = ["健康", "生活格言", "早安", "節慶", "新年", "聖誕節",
-                "壞了", "爛", "老了", "失敗", "地獄", "負能量", "厭世", "不想努力", "開", "炸", "retro"]
+                "壞了", "爛", "老了", "失敗", "地獄", "負能量", "厭世", "不想努力", "開", "炸", "retro",
+                "bug", "code", "coding", "debug", "工程師", "程式"]
 
     # 檢查 user_text 是否包含任一關鍵字
-    is_trigger = any(k in user_text for k in keywords)
+    is_trigger = any(k in user_text_lower for k in keywords)
 
     # 或是針對你的 ALLOWED_THEMES 檢查
     is_theme_command = user_text in ALLOWED_THEMES
@@ -310,6 +313,8 @@ def handle_message(event: MessageEvent):
     # 2. 彩蛋 B：地獄梗
     elif any(k in user_text for k in ["地獄", "負能量", "厭世", "不想努力"]):
         target_theme = "dark_humor"
+    elif any(k in user_text.lower() for k in ["bug", "code", "coding", "debug", "工程師", "程式"]):
+        target_theme = "programmer"
     elif "早" in user_text:
         target_theme = "morning"
     elif "健康" in user_text:

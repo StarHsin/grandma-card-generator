@@ -75,7 +75,7 @@ class ComposeService:
         # 地獄梗 -> 用早安圖 (反差最大)
         # 壞了 -> 用健康圖 (身體健康 vs 系統壞了)
         target_theme = theme
-        if theme in ["dark_humor", "broken_egg"]:
+        if theme in ["dark_humor", "broken_egg", "programmer"]:
             target_theme = random.choice(["morning", "life"])
 
         theme_dir = os.path.join(self.background_base_dir, target_theme)
@@ -92,6 +92,11 @@ class ComposeService:
         return img
 
     def _get_title_color(self, theme: str) -> Tuple[int, int, int, int]:
+
+        # === [新增] 彩蛋 ：工程師專屬綠色 ===
+        if theme == "programmer":
+            return (0, 255, 0, 255)  # 鮮豔的 Hacker Green
+
         return self.theme_title_colors.get(theme, (180, 40, 30, 255))
 
     # ===== 對外主方法 =====
