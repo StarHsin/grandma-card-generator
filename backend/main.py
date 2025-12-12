@@ -239,7 +239,8 @@ def handle_message(event: MessageEvent):
 
     keywords = ["健康", "生活格言", "早安", "節慶", "新年", "聖誕節",
                 "壞了", "爛", "老了", "失敗", "地獄", "負能量", "厭世", "不想努力", "開", "炸", "retro",
-                "bug", "code", "coding", "debug", "工程師", "程式"]
+                "bug", "code", "coding", "debug", "工程師", "程式",
+                "雪", "下雪"]
 
     # 檢查 user_text 是否包含任一關鍵字
     is_trigger = any(k in user_text_lower for k in keywords)
@@ -315,6 +316,8 @@ def handle_message(event: MessageEvent):
         target_theme = "dark_humor"
     elif any(k in user_text.lower() for k in ["bug", "code", "coding", "debug", "工程師", "程式"]):
         target_theme = "programmer"
+    elif any(k in user_text_lower for k in ["雪", "下雪"]):
+        target_theme = "festival_christmas"
     elif "早" in user_text:
         target_theme = "morning"
     elif "健康" in user_text:

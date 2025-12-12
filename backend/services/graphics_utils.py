@@ -335,3 +335,32 @@ def maybe_add_sticker(bg: Image.Image, sticker_dir: str) -> None:
         )
 
     bg.alpha_composite(sticker, dest=pos)
+
+
+def add_snow_effect(img: Image.Image) -> None:
+    """
+    在圖片上畫出隨機分佈的半透明雪花。
+    """
+    # 建立一個可以用來畫半透明圖層的物件
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    width, height = img.size
+
+    # 雪花數量，隨機 100~200 顆
+    num_flakes = random.randint(100, 200)
+
+    for _ in range(num_flakes):
+        x = random.randint(0, width)
+        y = random.randint(0, height)
+        # 雪花大小不一 (半徑 2~6)
+        radius = random.randint(2, 6)
+        # 透明度隨機 (150~230)，營造遠近感 (255是不透明)
+        alpha = random.randint(150, 230)
+
+        draw.ellipse(
+            (x, y, x + radius, y + radius),
+            fill=(255, 255, 255, alpha)
+        )
+
+    # 將雪花圖層疊加到原圖上
+    img.alpha_composite(overlay)

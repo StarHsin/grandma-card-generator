@@ -24,6 +24,7 @@ from .graphics_utils import (
     draw_vertical_text,
     measure_vertical_text_height,
     maybe_add_sticker,
+    add_snow_effect,
 )
 
 
@@ -381,6 +382,14 @@ class ComposeService:
 
         # 最後可選地加一張貼紙
         maybe_add_sticker(bg, self.sticker_dir)
+
+        # === [新增] 彩蛋：飄雪特效 ===
+        # 觸發條件：主題包含 "christmas" (聖誕節)，或者標題/副標有 "雪" 這個字
+        is_christmas = "christmas" in theme
+        has_snow_text = "雪" in title or "雪" in subtitle
+
+        if is_christmas or has_snow_text:
+            add_snow_effect(bg)
 
         if "old" in theme or "retro" in theme or "復古" in title:
             bg = apply_deep_fry(bg)
