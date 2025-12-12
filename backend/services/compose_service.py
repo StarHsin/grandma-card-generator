@@ -77,7 +77,7 @@ class ComposeService:
         if theme in ["dark_humor", "broken_egg"]:
             target_theme = random.choice(["morning", "life"])
 
-        theme_dir = os.path.join(self.background_base_dir, theme)
+        theme_dir = os.path.join(self.background_base_dir, target_theme)
         pattern = os.path.join(theme_dir, "*.*")
         candidates = glob.glob(pattern)
 
